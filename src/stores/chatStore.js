@@ -12,6 +12,7 @@ export const useChatStore = defineStore("chat", {
     onlineUsers: [],
     isConnected: false,
     isLoadingMessages: false,
+    hasMoreMessages: true,
   }),
 
   getters: {
@@ -76,11 +77,20 @@ export const useChatStore = defineStore("chat", {
     },
 
     async fetchMessages(conversationId, cursor = null) {
-      if (!cursor) this.messages = []; // Reset nếu load lần đầu
+      if (!cursor) {
+        this.messages = [];
+        this.hasMoreMessages = true; // Reset khi đổi hội thoại
+      }
+
+      if (cursor && !this.hasMoreMessages) return;
+
       this.isLoadingMessages = true;
       try {
         const params = cursor ? { cursor, limit: 20 } : { limit: 20 };
         const { data } = await axiosClient.get(`/messages/${conversationId}`, { params });
+        if (data.messages.length < 20) {
+          this.hasMoreMessages = false;
+        }
 
         if (cursor) {
           // Load more (prepend)
@@ -91,6 +101,7 @@ export const useChatStore = defineStore("chat", {
           this.currentConversationId = conversationId;
           // Join room socket
           this.socket?.emit("conversation:join", { conversationId });
+          if (this.messages.length < 10) this.hasMoreMessages = false;
         }
         return data.messages; // Trả về để UI biết còn data không
       } finally {
@@ -137,6 +148,38 @@ export const useChatStore = defineStore("chat", {
         // Đưa lên đầu danh sách
         this.conversations.splice(convIdx, 1);
         this.conversations.unshift(conv);
+      }
+    },
+
+    async selectConversation(convId) {
+      if (this.currentConversationId === convId) return;
+      this.currentConversationId = convId;
+      await this.fetchMessages(convId);
+    },
+
+    async selectConversation(convId) {
+      if (this.currentConversationId === convId) return;
+      this.currentConversationId = convId;
+
+      // Load tin nhắn của hội thoại này
+      await this.fetchMessages(convId);
+    },
+    async createPrivateConversation(userId) {
+      try {
+        const { data } = await axiosClient.post("/conversations/private", { userId });
+        const conv = data.conversation;
+
+        const exists = this.conversations.find((c) => c._id === conv._id);
+        if (!exists) {
+          this.conversations.unshift(conv);
+        }
+
+        // Chọn luôn hội thoại đó
+        await this.selectConversation(conv._id);
+        return true;
+      } catch (error) {
+        console.error("Lỗi tạo chat:", error);
+        throw error;
       }
     },
   },

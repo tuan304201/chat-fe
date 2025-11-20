@@ -12,6 +12,7 @@ const axiosClient = axios.create({
 // Request Interceptor
 axiosClient.interceptors.request.use((config) => {
   const authStore = useAuthStore();
+  console.log("Interceptor checking token:", authStore.accessToken);
   if (authStore.accessToken) {
     config.headers.Authorization = `Bearer ${authStore.accessToken}`;
   }

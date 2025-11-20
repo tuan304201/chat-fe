@@ -20,7 +20,10 @@ const getFullUrl = (path) => {
   <div :class="['flex w-full mb-4 group', isMe ? 'justify-end' : 'justify-start']">
     <div v-if="!isMe" class="mr-2">
       <img
-        :src="getFullUrl(message.sender.avatarUrl) || 'https://via.placeholder.com/40'"
+        :src="
+          getFullUrl(message.sender.avatarUrl) ||
+          'https://img.freepik.com/free-vector/smiling-young-man-illustration_1308-174669.jpg'
+        "
         class="w-8 h-8 rounded-full object-cover border"
       />
     </div>
